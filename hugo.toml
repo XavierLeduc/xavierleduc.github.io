@@ -1,0 +1,38 @@
+baseURL = "https://xavierleduc.github.io/"
+languageCode = "fr-fr"
+title = "Le blog de Xavier"
+theme = "PaperMod"
+
+[taxonomies]
+  tag = "tags"
+  category = "categories"
+
+[params]
+  defaultTheme = "auto"
+  ShowReadingTime = true
+  ShowPostNavLinks = true
+  ShowBreadCrumbs = true
+  ShowCodeCopyButtons = true
+  ShowRssButtonInSectionTermList = true
+  ShowToc = true
+
+[[menu.main]]
+  identifier = "posts"
+  name = "Articles"
+  url = "/posts/"
+  weight = 10
+
+[[menu.main]]
+  identifier = "tags"
+  name = "Tags"
+  url = "/tags/"
+  weight = 20
+
+[[menu.main]]
+  identifier = "categories"
+  name = "Catégories"
+  url = "/categories/"
+  weight = 30
+
+[markup.goldmark.renderer]
+  unsafe = true
