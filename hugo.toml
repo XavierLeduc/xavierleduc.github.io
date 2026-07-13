@@ -1,6 +1,6 @@
 baseURL = "https://xavierleduc.github.io/"
 languageCode = "fr-fr"
-title = "Le blog de Xavier"
+title = "Xavier LEDUC"
 theme = "PaperMod"
 
 [taxonomies]
