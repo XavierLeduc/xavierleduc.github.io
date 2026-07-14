@@ -1,38 +1,50 @@
 baseURL = "https://xavierleduc.github.io/"
-languageCode = "fr-fr"
+locale = "fr-fr"
 title = "Xavier LEDUC"
 theme = "vintage-web-hugo-theme"
+
+[pagination]
+  pagerSize = 10
+  path = "page"
+
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
+
+ignoreLogs = ['warning-goldmark-raw-html']
 
 [taxonomies]
   tag = "tags"
   category = "categories"
 
-[params]
-  defaultTheme = "auto"
-  ShowReadingTime = true
-  ShowPostNavLinks = true
-  ShowBreadCrumbs = true
-  ShowCodeCopyButtons = true
-  ShowRssButtonInSectionTermList = true
-  ShowToc = true
-
 [[menu.main]]
-  identifier = "posts"
-  name = "Articles"
-  url = "/posts/"
+  name = "Accueil"
+  url = "/"
   weight = 10
 
 [[menu.main]]
-  identifier = "tags"
-  name = "Tags"
-  url = "/tags/"
+  name = "Articles"
+  url = "/posts/"
   weight = 20
 
-[[menu.main]]
-  identifier = "categories"
-  name = "Catégories"
-  url = "/categories/"
-  weight = 30
+[params]
+  description = "Blog personnel de Xavier LEDUC : randonnée, cybersécurité et autres passions"
+  author = "Xavier LEDUC"
 
-[markup.goldmark.renderer]
-  unsafe = true
+  show_browser_chrome = true
+  show_status_bar = true
+  show_sidebar = true
+  show_welcome_message = true
+  welcome_message = "Bienvenue sur le blog de Xavier LEDUC !"
+
+  show_featured_sections = true
+  show_stats = true
+  show_retro_elements = true
+  show_sharing = true
+
+  show_retro_footer = true
+  show_build_info = false
+
+  show_sidebar_stats = true
+  show_retro_sidebar = true
