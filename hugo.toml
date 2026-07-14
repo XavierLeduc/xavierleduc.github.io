@@ -1,7 +1,7 @@
 baseURL = "https://xavierleduc.github.io/"
 languageCode = "fr-fr"
 title = "Xavier LEDUC"
-theme = "hugo-noir"
+theme = "vintage-web-hugo-theme"
 
 [taxonomies]
   tag = "tags"
