@@ -88,6 +88,24 @@
     background: var(--panel);
   }
   .preview :first-child { margin-top: 0; }
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin-bottom: 0.4rem;
+  }
+  .toolbar button {
+    margin-top: 0;
+    padding: 0.35rem 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--panel);
+    color: var(--fg);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .toolbar button:hover { background: var(--border); }
   button {
     margin-top: 1rem;
     padding: 0.6rem 1.4rem;
@@ -147,6 +165,19 @@
 <div class="editor-grid">
   <div class="field">
     <label for="content">Contenu (markdown)</label>
+    <div class="toolbar" id="toolbar">
+      <button type="button" data-action="bold" title="Gras">Gras</button>
+      <button type="button" data-action="italic" title="Italique">Italique</button>
+      <button type="button" data-action="heading" title="Titre">Titre</button>
+      <button type="button" data-action="link" title="Lien">Lien</button>
+      <button type="button" data-action="ul" title="Liste à puces">Liste</button>
+      <button type="button" data-action="ol" title="Liste numérotée">Num.</button>
+      <button type="button" data-action="quote" title="Citation">Citation</button>
+      <button type="button" data-action="code" title="Bloc de code">Code</button>
+      <button type="button" data-action="image" title="Image">Image</button>
+      <button type="button" data-action="hr" title="Ligne horizontale">Ligne</button>
+      <button type="button" data-action="table" title="Tableau">Tableau</button>
+    </div>
     <textarea id="content" spellcheck="true"></textarea>
   </div>
   <div class="field">
@@ -178,6 +209,72 @@ contentEl.addEventListener("input", () => {
 function renderPreview() {
   previewEl.innerHTML = window.marked ? marked.parse(contentEl.value) : contentEl.value;
 }
+
+function setSelection(start, end) {
+  contentEl.focus();
+  contentEl.setSelectionRange(start, end);
+}
+
+function wrapSelection(before, after, placeholder) {
+  const start = contentEl.selectionStart;
+  const end = contentEl.selectionEnd;
+  const selected = contentEl.value.slice(start, end) || placeholder;
+  const value = contentEl.value;
+  contentEl.value = value.slice(0, start) + before + selected + after + value.slice(end);
+  setSelection(start + before.length, start + before.length + selected.length);
+  renderPreview();
+}
+
+function prefixLines(prefix) {
+  const start = contentEl.selectionStart;
+  const end = contentEl.selectionEnd;
+  const value = contentEl.value;
+  const lineStart = value.lastIndexOf("\n", start - 1) + 1;
+  let lineEnd = value.indexOf("\n", end);
+  if (lineEnd === -1) lineEnd = value.length;
+
+  const block = value.slice(lineStart, lineEnd);
+  const prefixed = block.split("\n").map(line => prefix + line).join("\n");
+  contentEl.value = value.slice(0, lineStart) + prefixed + value.slice(lineEnd);
+  setSelection(lineStart, lineStart + prefixed.length);
+  renderPreview();
+}
+
+function insertAtCursor(text, selectFrom, selectTo) {
+  const start = contentEl.selectionStart;
+  const end = contentEl.selectionEnd;
+  const value = contentEl.value;
+  contentEl.value = value.slice(0, start) + text + value.slice(end);
+  if (typeof selectFrom === "number") {
+    setSelection(start + selectFrom, start + selectTo);
+  } else {
+    setSelection(start + text.length, start + text.length);
+  }
+  renderPreview();
+}
+
+const TOOLBAR_ACTIONS = {
+  bold: () => wrapSelection("**", "**", "texte en gras"),
+  italic: () => wrapSelection("*", "*", "texte en italique"),
+  heading: () => prefixLines("## "),
+  link: () => insertAtCursor("[texte du lien](https://)", 1, 15),
+  ul: () => prefixLines("- "),
+  ol: () => prefixLines("1. "),
+  quote: () => prefixLines("> "),
+  code: () => wrapSelection("\n```\n", "\n```\n", "code"),
+  image: () => insertAtCursor("![texte alternatif](https://)", 2, 19),
+  hr: () => insertAtCursor("\n\n---\n\n"),
+  table: () => insertAtCursor(
+    "\n| Colonne 1 | Colonne 2 |\n| --- | --- |\n| valeur 1 | valeur 2 |\n"
+  )
+};
+
+document.getElementById("toolbar").addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-action]");
+  if (!btn) return;
+  const action = TOOLBAR_ACTIONS[btn.dataset.action];
+  if (action) action();
+});
 
 function slugify(title) {
   return title
