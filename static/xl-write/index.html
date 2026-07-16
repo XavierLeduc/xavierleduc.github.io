@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Éditeur d'articles</title>
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f4f2ee;
+    --fg: #1c1b19;
+    --panel: #ffffff;
+    --border: #d8d3c8;
+    --accent: #6b4f2a;
+    --accent-fg: #fff;
+    --error-bg: #f8d7da;
+    --error-fg: #58151c;
+    --success-bg: #d4edda;
+    --success-fg: #14532d;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1b19;
+      --fg: #ece7dd;
+      --panel: #262420;
+      --border: #3a362e;
+      --accent: #c9a26d;
+      --accent-fg: #1c1b19;
+      --error-bg: #4a1c22;
+      --error-fg: #f5b8bf;
+      --success-bg: #163a24;
+      --success-fg: #a8e6bc;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 1.5rem;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  h1 { font-size: 1.3rem; margin: 0 0 1rem; }
+  .field { margin-bottom: 0.9rem; }
+  label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.25rem; }
+  input[type=text], input[type=password] {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--panel);
+    color: var(--fg);
+    font-size: 0.95rem;
+  }
+  .checkbox-field { display: flex; align-items: center; gap: 0.5rem; }
+  .checkbox-field label { margin: 0; }
+  .row { display: flex; gap: 1rem; flex-wrap: wrap; }
+  .row > .field { flex: 1 1 220px; }
+  .editor-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-top: 0.5rem;
+  }
+  @media (max-width: 800px) {
+    .editor-grid { grid-template-columns: 1fr; }
+  }
+  textarea {
+    width: 100%;
+    height: 60vh;
+    padding: 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--panel);
+    color: var(--fg);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.9rem;
+    resize: vertical;
+  }
+  .preview {
+    height: 60vh;
+    overflow-y: auto;
+    padding: 0.8rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--panel);
+  }
+  .preview :first-child { margin-top: 0; }
+  button {
+    margin-top: 1rem;
+    padding: 0.6rem 1.4rem;
+    border: none;
+    border-radius: 4px;
+    background: var(--accent);
+    color: var(--accent-fg);
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button:disabled { opacity: 0.6; cursor: default; }
+  .banner {
+    margin-top: 1rem;
+    padding: 0.7rem 1rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    display: none;
+  }
+  .banner.error { background: var(--error-bg); color: var(--error-fg); display: block; }
+  .banner.success { background: var(--success-bg); color: var(--success-fg); display: block; }
+  .banner a { color: inherit; font-weight: 600; }
+  .hint { font-size: 0.78rem; opacity: 0.7; margin-top: 0.2rem; }
+</style>
+</head>
+<body>
+
+<h1>Éditeur d'articles</h1>
+
+<div class="field">
+  <label for="token">Token GitHub (Personal Access Token)</label>
+  <input type="password" id="token" autocomplete="off" placeholder="ghp_...">
+  <div class="hint">Reste en mémoire dans cet onglet uniquement, jamais stocké ni envoyé ailleurs qu'à api.github.com.</div>
+</div>
+
+<div class="field">
+  <label for="title">Titre</label>
+  <input type="text" id="title" autocomplete="off">
+</div>
+
+<div class="row">
+  <div class="field">
+    <label for="tags">Tags (séparés par des virgules)</label>
+    <input type="text" id="tags" placeholder="cybersécurité, recon" autocomplete="off">
+  </div>
+  <div class="field">
+    <label for="categories">Catégories (séparées par des virgules)</label>
+    <input type="text" id="categories" placeholder="Général" autocomplete="off">
+  </div>
+</div>
+
+<div class="checkbox-field field">
+  <input type="checkbox" id="draft">
+  <label for="draft">Brouillon (draft)</label>
+</div>
+
+<div class="editor-grid">
+  <div class="field">
+    <label for="content">Contenu (markdown)</label>
+    <textarea id="content" spellcheck="true"></textarea>
+  </div>
+  <div class="field">
+    <label>Aperçu</label>
+    <div class="preview" id="preview"></div>
+  </div>
+</div>
+
+<button id="publish">Publier</button>
+
+<div class="banner" id="banner"></div>
+
+<script>
+const OWNER = "XavierLeduc";
+const REPO = "xavierleduc.github.io";
+const BRANCH = "main";
+
+const contentEl = document.getElementById("content");
+const previewEl = document.getElementById("preview");
+const bannerEl = document.getElementById("banner");
+const publishBtn = document.getElementById("publish");
+
+let previewTimer = null;
+contentEl.addEventListener("input", () => {
+  clearTimeout(previewTimer);
+  previewTimer = setTimeout(renderPreview, 150);
+});
+
+function renderPreview() {
+  previewEl.innerHTML = window.marked ? marked.parse(contentEl.value) : contentEl.value;
+}
+
+function slugify(title) {
+  return title
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function isoDateNow() {
+  const d = new Date();
+  const pad = n => String(n).padStart(2, "0");
+  const offMin = -d.getTimezoneOffset();
+  const sign = offMin >= 0 ? "+" : "-";
+  const offH = pad(Math.floor(Math.abs(offMin) / 60));
+  const offM = pad(Math.abs(offMin) % 60);
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+    + `T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}${sign}${offH}:${offM}`;
+}
+
+function toYamlList(raw) {
+  const items = raw.split(",").map(s => s.trim()).filter(Boolean);
+  return "[" + items.map(s => `"${s.replace(/"/g, '\\"')}"`).join(", ") + "]";
+}
+
+function buildFileContent({ title, tags, categories, draft, body }) {
+  const frontMatter = [
+    "---",
+    `title: "${title.replace(/"/g, '\\"')}"`,
+    `date: ${isoDateNow()}`,
+    `draft: ${draft}`,
+    `tags: ${toYamlList(tags)}`,
+    `categories: ${toYamlList(categories)}`,
+    "---",
+    "",
+    body,
+    ""
+  ].join("\n");
+  return frontMatter;
+}
+
+function showBanner(type, html) {
+  bannerEl.className = "banner " + type;
+  bannerEl.innerHTML = html;
+}
+
+function clearBanner() {
+  bannerEl.className = "banner";
+  bannerEl.innerHTML = "";
+}
+
+async function ghRequest(path, token, options = {}) {
+  const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${path}`, {
+    ...options,
+    headers: {
+      "Accept": "application/vnd.github+json",
+      "Authorization": `Bearer ${token}`,
+      ...(options.headers || {})
+    }
+  });
+  return res;
+}
+
+async function publish() {
+  clearBanner();
+
+  const token = document.getElementById("token").value.trim();
+  const title = document.getElementById("title").value.trim();
+  const tags = document.getElementById("tags").value;
+  const categories = document.getElementById("categories").value;
+  const draft = document.getElementById("draft").checked;
+  const body = contentEl.value;
+
+  if (!token) { showBanner("error", "Le token GitHub est requis."); return; }
+  if (!title) { showBanner("error", "Le titre est requis."); return; }
+
+  const slug = slugify(title);
+  if (!slug) { showBanner("error", "Impossible de générer un slug depuis ce titre."); return; }
+
+  const path = `content/posts/${slug}.md`;
+
+  publishBtn.disabled = true;
+  showBanner("success", "Publication en cours…");
+
+  try {
+    const checkRes = await ghRequest(`${path}?ref=${BRANCH}`, token);
+    if (checkRes.status === 200) {
+      showBanner("error", `Le fichier ${path} existe déjà sur ${BRANCH}.`);
+      return;
+    }
+    if (checkRes.status !== 404) {
+      const errBody = await checkRes.json().catch(() => ({}));
+      showBanner("error", `Erreur lors de la vérification (${checkRes.status}) : ${errBody.message || checkRes.statusText}`);
+      return;
+    }
+
+    const fileContent = buildFileContent({ title, tags, categories, draft, body });
+    const putRes = await ghRequest(path, token, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: `Nouvel article: ${title}`,
+        content: btoa(unescape(encodeURIComponent(fileContent))),
+        branch: BRANCH
+      })
+    });
+
+    if (!putRes.ok) {
+      const errBody = await putRes.json().catch(() => ({}));
+      showBanner("error", `Échec de la publication (${putRes.status}) : ${errBody.message || putRes.statusText}`);
+      return;
+    }
+
+    const data = await putRes.json();
+    const commitUrl = data.commit && data.commit.html_url;
+    showBanner("success", `Article publié : ${path}.` + (commitUrl ? ` <a href="${commitUrl}" target="_blank" rel="noopener">Voir le commit</a>` : ""));
+  } catch (err) {
+    showBanner("error", `Erreur réseau : ${err.message}`);
+  } finally {
+    publishBtn.disabled = false;
+  }
+}
+
+publishBtn.addEventListener("click", publish);
+renderPreview();
+</script>
+
+</body>
+</html>
