@@ -23,11 +23,6 @@ ignoreLogs = ['warning-goldmark-raw-html']
   url = "/"
   weight = 10
 
-[[menu.main]]
-  name = "Trail"
-  url = "/posts/"
-  weight = 20
-
 [params]
   description = "Blog personnel de Xavier LEDUC : randonnée, cybersécurité et autres passions"
   author = "Xavier LEDUC"
